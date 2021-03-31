@@ -1,61 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Excel 模板渲染</title>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.2.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ejs@3.0.1/ejs.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/filesaver.js@1.3.4/FileSaver.min.js"></script>
     <style>
-        body {
-            font-family: arial,sans-serif;
-        }
-        .codeShow{
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: nowrap;
-        }
-        .codeShow div {
-            width: 32%;
-            text-align: center;
-        }
-        #rawTemplate, #data, #renderedTemplate {
-            width: 32%;
-            height: 500px;
-            overflow: auto;
-            border: 1px solid #999;
-        }
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888; 
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555; 
-        }
+      body {
+        font-family: arial, sans-serif;
+      }
+      .codeShow {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+      }
+      .codeShow div {
+        width: 32%;
+        text-align: center;
+      }
+      #rawTemplate,
+      #data,
+      #renderedTemplate {
+        width: 32%;
+        height: 500px;
+        overflow: auto;
+        border: 1px solid #999;
+      }
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="codeShow">
-        <div>模板</div>
-        <div>数据</div>
-        <div>生成后的模板</div>
+      <div>模板</div>
+      <div>数据</div>
+      <div>生成后的模板</div>
     </div>
     <div class="codeShow scrollbar">
-        <pre id="rawTemplate" class="scrollbar"></pre>
-        <pre id="data" class="scrollbar"></pre>
-        <pre id="renderedTemplate" class="scrollbar"></pre>
+      <pre id="rawTemplate" class="scrollbar"></pre>
+      <pre id="data" class="scrollbar"></pre>
+      <pre id="renderedTemplate" class="scrollbar"></pre>
     </div>
-    <div style="text-align: center;">
-        <button id="download" style="margin-top: 20px;">download excel</button>
+    <div style="text-align: center">
+      <button id="download" style="margin-top: 20px">download excel</button>
     </div>
-    <script src="./index.js"></script>
-</body>
+    <script>
+      let rawTemplate = document.querySelector("#rawTemplate");
+      let templateData = document.querySelector("#data");
+      let renderedTemplate = document.querySelector("#renderedTemplate");
+      let downloadBtn = document.querySelector("#download");
+
+      let sheetData = [
+        {
+          name: "任务1",
+          address: "美国纽约",
+          time: "2019.12.18-2019.12.23",
+          day: 6,
+          people: [
+            { name: "张三1", dept: "部长1" },
+            { name: "张三2", dept: "部长2" },
+          ],
+        },
+        {
+          name: "任务2",
+          address: "美国纽约2",
+          time: "2019.12.18-2019.12.23",
+          day: 9,
+          people: [
+            { name: "张三3", dept: "部长3" },
+            { name: "张三4", dept: "部长4" },
+          ],
+        },
+      ];
+
+      templateData.innerText = JSON.stringify(sheetData, null, 2);
+
+      axios({
+        method: "get",
+        url:
+          "https://cdn.jsdelivr.net/gh/GoldSubmarine/export-excel-demo@master/template.zip",
+        responseType: "arraybuffer",
+      }).then(function (req) {
+        let zip = new JSZip();
+        zip.loadAsync(req.data).then((data) => {
+          data
+            .file("xl/worksheets/sheet1.xml")
+            .async("string")
+            .then((sheet1) => {
+              let sheetStr = ejs.render(sheet1, { data: sheetData });
+              rawTemplate.innerText = sheet1;
+              renderedTemplate.innerText = sheetStr;
+              downloadBtn.onclick = function () {
+                zip.file("xl/worksheets/sheet1.xml", sheetStr);
+                zip
+                  .generateAsync({
+                    type: "blob",
+                    mimeType:
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  })
+                  .then(function (blob) {
+                    saveAs(blob, "output.xlsx");
+                  });
+              };
+            });
+        });
+      });
+    </script>
+  </body>
 </html>
